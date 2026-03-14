@@ -1,4 +1,4 @@
-f"""Question 1b: MLP architecture, forward pass, and loss function.
+"""Question 1b: MLP architecture, forward pass, and loss function.
 
 Architecture
 ------------
@@ -22,6 +22,7 @@ def bce_loss(y_hat, y):
     eps = 1e-15
     yh = np.clip(y_hat, eps, 1 - eps)
     return -np.mean(y * np.log(yh) + (1 - y) * np.log(1 - yh))
+
 
 # Layers
 class LinearLayer:
@@ -65,6 +66,7 @@ class SigmoidLayer:
         s = _sigmoid(self.z)
         return da * s * (1 - s)
 
+
 # The main model:
 class MLP:
     """multi layer perceptron """
@@ -103,10 +105,21 @@ class MLP:
 
 
 def main(dataset, layer_sizes, model_seed):
-    """Initialize the model, run one forward pass on training data, return y_hat.
-    """
+    """Initialize the model, run one forward pass on training data, return y_hat."""
     model = MLP(layer_sizes=layer_sizes, random_state=model_seed)
     y_hat = model.forward(dataset.X_train)
     loss = bce_loss(y_hat, dataset.y_train)
-    print(f"Initial Cross entropy loss: {loss:.4f}")
+
+    expected_shape = (dataset.X_train.shape[0], 1)
+    assert y_hat.shape == expected_shape, (
+        f"Expected y_hat shape {expected_shape}, got {y_hat.shape}"
+    )
+    assert np.all((y_hat > 0) & (y_hat < 1)), (
+        "Sigmoid outputs must lie strictly in (0, 1)"
+    )
+
+    print(f"Initial cross-entropy loss: {loss:.4f}")
+    print(f"y_hat shape: {y_hat.shape} [OK]")
+    print("Predictions in (0,1): [OK]")
+
     return y_hat
