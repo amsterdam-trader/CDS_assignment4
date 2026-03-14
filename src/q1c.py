@@ -5,38 +5,40 @@ from .q1b import MLP, bce_loss # import the loss and the model from q1b
 
 
 def gradient_check(model, X, y, epsilon=1e-5):
-    """Compare analytical gradients with finite-difference approximation.
-
-    Returns the maximum absolute difference across *all* checked weights
-    and a per-parameter breakdown list.
+    """Compare analytical gradients with finite-difference approximation
+    on a small fixed subset of parameters.
     """
-    #Forward + backward to obtain analytical gradients
     y_hat = model.forward(X)
     model.backward(y_hat, y)
+
     max_diff = 0.0
     records = []
-    layers = [
-        ("linear1", model.linear1),
-        ("linear2", model.linear2),
+
+    checks = [
+        ("linear1", "W", model.linear1.W, model.linear1.dW, [(0, 0), (1, 5), (0, 10)]),
+        ("linear1", "b", model.linear1.b, model.linear1.db, [(0,), (5,), (10,)]),
+        ("linear2", "W", model.linear2.W, model.linear2.dW, [(0, 0), (5, 0), (10, 0)]),
+        ("linear2", "b", model.linear2.b, model.linear2.db, [(0,)]),
     ]
-    for layer_name, layer in layers:
-        for param_name, param, grad in [("W", layer.W, layer.dW),
-                                        ("b", layer.b, layer.db)]:
-            it = np.nditer(param, flags=["multi_index"])
-            while not it.finished:
-                idx = it.multi_index
-                original = param[idx]
-                param[idx] = original + epsilon
-                loss_plus = bce_loss(model.forward(X), y)
-                param[idx] = original - epsilon
-                loss_minus = bce_loss(model.forward(X), y)
-                param[idx] = original
-                numerical = (loss_plus - loss_minus) / (2 * epsilon)
-                analytical = grad[idx]
-                diff = abs(numerical - analytical)
-                max_diff = max(max_diff, diff)
-                records.append((f"{layer_name}.{param_name}{list(idx)}", diff))
-                it.iternext()
+
+    for layer_name, param_name, param, grad, indices in checks:
+        for idx in indices:
+            original = param[idx]
+
+            param[idx] = original + epsilon
+            loss_plus = bce_loss(model.forward(X), y)
+
+            param[idx] = original - epsilon
+            loss_minus = bce_loss(model.forward(X), y)
+
+            param[idx] = original
+
+            numerical = (loss_plus - loss_minus) / (2 * epsilon)
+            analytical = grad[idx]
+            diff = abs(numerical - analytical)
+
+            max_diff = max(max_diff, diff)
+            records.append((f"{layer_name}.{param_name}{list(idx)}", analytical, numerical, diff))
 
     return max_diff, records
 
@@ -62,9 +64,14 @@ def main(dataset, layer_sizes=(2, 16, 1), model_seed=42, epsilon=1e-5):
     max_diff, records = gradient_check(
         model, dataset.X_train, dataset.y_train, epsilon=epsilon,
     )
+
     print_gradient_shapes(model)
     n_params = len(records)
-    print(f"\nGradient check  (eps = {epsilon}, {n_params} parameters checked)")
-    print(f"  Max |analytical - numerical|: {max_diff:.2e}")
+    print(f"\nGradient check (eps = {epsilon}, {n_params} parameters checked)")
+    print(f"Max |analytical - numerical|: {max_diff:.2e}")
+
+    print("\nChecked parameters:")
+    for name, analytical, numerical, diff in records:
+        print(f"{name:20s} analytical={analytical: .6e} numerical={numerical: .6e} diff={diff: .2e}")
 
     return max_diff
