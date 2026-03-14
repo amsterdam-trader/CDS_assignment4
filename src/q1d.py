@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .q1b import MLP, bce_loss
 
+
 def train(model, X_train, y_train, X_val, y_val,
           lr=0.05, batch_size=32, epochs=200, random_state=42):
     """Mini-batch gradient descent.  Returns loss history dict."""
@@ -27,6 +28,7 @@ def train(model, X_train, y_train, X_val, y_val,
         history["val_loss"].append(bce_loss(model.forward(X_val), y_val))
 
     return history
+
 
 def plot_losses(history):
     """Training and validation loss vs. epoch."""
@@ -67,11 +69,11 @@ contour plot at threshold 0.5."""
     plt.show()
     return fig
 
+
 def compute_accuracy(model, X, y):
     """Classification accuracy in percent."""
     preds = (model.forward(X) >= 0.5).astype(int)
     return float(np.mean(preds == y) * 100)
-
 
 
 # main function
@@ -91,6 +93,17 @@ def main(dataset, layer_sizes=(2, 16, 1), model_seed=42,
     plot_bounds(model, dataset.X_val, dataset.y_val)
 
     acc = compute_accuracy(model, dataset.X_val, dataset.y_val)
-    print(f"\nFinal validation accuracy: {acc:.2f}%")
+    final_train_loss = history["train_loss"][-1]
+    final_val_loss = history["val_loss"][-1]
 
-    return {"model": model, "history": history, "accuracy": acc}
+    print(f"\nFinal training loss:   {final_train_loss:.4f}")
+    print(f"Final validation loss: {final_val_loss:.4f}")
+    print(f"Final validation accuracy: {acc:.2f}%")
+
+    return {
+        "model": model,
+        "history": history,
+        "accuracy": acc,
+        "final_train_loss": final_train_loss,
+        "final_val_loss": final_val_loss,
+    }
